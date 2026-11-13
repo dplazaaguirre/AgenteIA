@@ -1,4 +1,4 @@
-# Agente RAG para políticas internas
+# Agente para políticas internas
 
 Agente sencillo con LangChain que consulta políticas Markdown indexadas en Chroma y responde usando solo los fragmentos recuperados. Los documentos incluidos son ejemplos ficticios: reemplázalos por la documentación aprobada de tu organización antes de usarlo para decisiones reales.
 
