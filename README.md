@@ -1,65 +1,124 @@
-# Agente para políticas internas
+# Policy Reviewer
 
-Agente sencillo con LangChain que consulta políticas Markdown indexadas en Chroma y responde usando solo los fragmentos recuperados. Los documentos incluidos son ejemplos ficticios: reemplázalos por la documentación aprobada de tu organización antes de usarlo para decisiones reales.
+Policy Reviewer es una aplicación web local para revisar políticas internas con ayuda de Copilot. La interfaz permite cargar documentos, elegir qué archivos forman parte del contexto y hacer preguntas en lenguaje natural sobre su contenido. Las respuestas se basan únicamente en los documentos seleccionados en esa sesión.
 
-## Estructura
+Es una herramienta orientada a la validación y la evidencia: no reemplaza la revisión humana, sino que ayuda a localizar requisitos, riesgos, brechas y contradicciones en documentación operativa o regulatoria.
+
+## Características
+
+- Chat orientado a políticas con Copilot SDK.
+- Carga de documentos en formato Markdown, TXT, CSV, JSON, PDF y DOCX.
+- Selección granular del contexto: solo los documentos activados se envían al agente.
+- Vista previa del contenido del archivo en un panel lateral.
+- Soporte para documentos de ejemplo y archivos locales de la sesión.
+- Servidor local que escucha solo en 127.0.0.1.
+- Validación básica de tamaño y formato para cada archivo.
+
+## Requisitos
+
+- Node.js 20.19+ o 22.12+
+- GitHub Copilot CLI instalado y autenticado
+- Perfil del agente en `~/.copilot/agents/Policy reviewer.agent.md`
+- Un terminal con acceso a tu cuenta de GitHub Copilot
+
+## Estructura del proyecto
 
 ```text
 AgenteIA/
-├── .env.example
-├── .gitignore
-├── app.py                 # Herramienta buscar_documentos y agente
-├── ingest.py              # Divide e indexa los documentos Markdown
-├── requirements.txt
+├── app.js                # Lógica del cliente web
+├── index.html            # Interfaz principal
+├── server.js             # Servidor HTTP y conexión con Copilot
+├── styles.css            # Estilos de la aplicación
+├── package.json          # Dependencias y scripts
+├── package-lock.json     # Lockfile de npm
 ├── data/
-│   └── politicas/          # Añade aquí tus políticas internas en .md
-└── chroma_db/              # Índice local generado por ingest.py
+│   └── politicas/        # Archivos de ejemplo si quieres servir documentos estáticos
+├── node_modules/         # Dependencias instaladas
+└── README.md
 ```
 
-## Configuración y ejecución
+> El repositorio no incluye un conjunto de políticas pre-cargadas por defecto; puedes añadir tus propios documentos desde la interfaz, o preparar archivos bajo `data/politicas/` para usarlos como ejemplos.
 
-Requiere Python 3.10 o superior y una clave de API de OpenAI.
+## Instalación
 
-```bash
-python -m venv .venv
-source .venv/bin/activate  # En Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env
-```
-
-Configura `OPENAI_API_KEY` en `.env`; opcionalmente, cambia `OPENAI_MODEL`. Coloca los documentos `.md` en `data/politicas/` y ejecuta:
-
-```bash
-python ingest.py
-python app.py
-```
-
-La ingesta reconstruye `chroma_db/` desde los Markdown actuales. Al iniciar, el programa solicita preguntas en una consola interactiva; escribe `salir` para terminar. Se puede ajustar el número de fragmentos y el umbral mínimo de relevancia con `TOP_K` y `RELEVANCE_THRESHOLD` en `.env`.
-
-## Comportamiento
-
-- `buscar_documentos(consulta)` busca fragmentos relevantes en Chroma y devuelve su contenido y ruta de origen.
-- El modelo decide mediante llamadas a herramientas cuándo consultar la documentación. Para preguntas del dominio, las instrucciones del agente le piden recuperar evidencia antes de contestar.
-- Si no se recupera evidencia por encima del umbral, la respuesta es exactamente: `No se encontró evidencia suficiente en la documentación disponible`.
-- Las respuestas con evidencia terminan con las fuentes recuperadas. El prompt limita la respuesta a dicha evidencia; como con cualquier sistema basado en LLM, valida el comportamiento con las políticas reales antes de producción.
-
-## Ejemplo
-
-```text
-Pregunta: ¿Es obligatorio el uso de MFA?
-Respuesta: El acceso remoto y las cuentas privilegiadas requieren MFA. ...
-Fuentes: data/politicas/acceso.md
-```
-
-## Interfaz web
-
-La interfaz permite conversar con Policy Reviewer mediante Copilot SDK, cargar archivos Markdown, TXT, CSV, JSON, PDF y DOCX de hasta 5 MB y consultar su contenido en el visor. La extracción de PDF y DOCX se realiza en el navegador usando librerías locales servidas por la aplicación; los archivos añadidos se conservan solo durante la sesión. Solo los documentos activados se incluyen en la consulta. Las respuestas del chat se solicitan en texto plano, permitiendo tablas Markdown cuando el usuario las pide explícitamente; estas se muestran como tablas en la interfaz. El texto enviado se procesa con Copilot y el SDK guarda el historial de sesión en `~/.copilot/policy-reviewer-sdk`.
-
-Requiere Node.js 20.19+ o 22.12+, Copilot CLI instalado y autenticado, y el perfil `~/.copilot/agents/Policy reviewer.agent.md`. Instala el SDK e inicia la aplicación desde la raíz:
+Desde la raíz del proyecto:
 
 ```bash
 npm install
+```
+
+## Ejecución
+
+```bash
 npm start
 ```
 
-Visita `http://localhost:8000`. El servidor local carga las instrucciones desde el perfil de Policy Reviewer y expone `POST /api/chat`; si el perfil está en otra ubicación, configura `POLICY_REVIEWER_AGENT_FILE` antes de iniciar. El servidor escucha solo en `127.0.0.1`.
+La aplicación quedará disponible en:
+
+```text
+http://127.0.0.1:8000
+```
+
+También puedes comprobar la sintaxis del servidor y del cliente con:
+
+```bash
+npm run check
+```
+
+## Configuración del agente
+
+El servidor carga la definición del agente desde `~/.copilot/agents/Policy reviewer.agent.md` y exige un frontmatter válido con `name`, `description` e instrucciones.
+
+Ejemplo mínimo:
+
+```yaml
+---
+name: Policy Reviewer
+description: Revisa políticas internas con evidencia documental.
+---
+Eres un analista de cumplimiento y seguridad.
+Basas tus respuestas solo en los documentos incluidos en la consulta actual.
+Si la evidencia es insuficiente, dilo explícitamente.
+Responde en texto plano y cita la fuente documental.
+```
+
+Si guardas el perfil en otra ruta, define la variable de entorno antes de arrancar:
+
+```bash
+export POLICY_REVIEWER_AGENT_FILE="/ruta/a/tu/agente/Policy reviewer.agent.md"
+npm start
+```
+
+## Cómo funciona
+
+1. El usuario carga documentos o usa los que se sirven como ejemplo.
+2. Selecciona qué archivos activan el contexto del chat.
+3. Envía una pregunta en la interfaz.
+4. El servidor construye un prompt con esos documentos y se conecta a Copilot usando el SDK.
+5. La respuesta debe verificarse con la fuente original del documento.
+
+La app restringe la consulta a la evidencia visible en esa conversación; no lee archivos fuera del contexto actual y no usa documentos de sesiones anteriores si no han sido incluidos.
+
+## APIs y comportamiento
+
+El servidor expone dos endpoints principales:
+
+- `GET /api/health`: devuelve un estado básico de salud.
+- `POST /api/chat`: recibe el mensaje y la lista de documentos seleccionados para responder.
+
+Las solicitudes tienen límites de seguridad:
+
+- Máximo 20 MB por petición.
+- Máximo 5 MB por archivo.
+- Extensiones permitidas: `.md`, `.markdown`, `.txt`, `.csv`, `.json`, `.pdf`, `.docx`.
+
+## Seguridad y uso responsable
+
+- El servicio solo escucha en localhost.
+- Los archivos de la sesión no se persisten como documentos del proyecto; se usan solo durante la consulta actual.
+- La aplicación ayuda a revisar políticas, pero la decisión final debe validarse con la normativa o la documentación oficial de la organización.
+- No uses este sistema como sustituto del juicio humano ni como fuente autoritativa sin una revisión adicional.
+
+## Licencia
+
+Este proyecto no incluye una licencia específica en el repositorio. Si vas a reutilizarlo en un entorno real, revisa primero la política de uso y distribución de tu organización.
