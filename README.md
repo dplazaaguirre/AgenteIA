@@ -110,7 +110,7 @@ Las solicitudes tienen límites de seguridad:
 
 - Máximo 20 MB por petición.
 - Máximo 5 MB por archivo.
-- Extensiones permitidas: `.md`, `.markdown`, `.txt`, `.csv`, `.json`, `.pdf`, `.docx`.
+- Extensiones permitidas: `.md`, `.markdown`, `.txt`, `.pdf`, `.docx`.
 
 ## Seguridad y uso responsable
 
